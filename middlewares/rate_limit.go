@@ -1,0 +1,30 @@
+package middlewares
+
+import (
+	"net/http"
+
+	"github.com/labstack/echo/v5"
+	"golang.org/x/time/rate"
+)
+
+func RateLimit() echo.MiddlewareFunc {
+	limiter := rate.NewLimiter(
+		rate.Limit(10),
+		20,
+	)
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			if !limiter.Allow() {
+				return c.JSON(
+					http.StatusTooManyRequests,
+					map[string]string{
+						"error": "rate limit exceeded",
+					},
+				)
+			}
+
+			return next(c)
+		}
+	}
+}

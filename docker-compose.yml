@@ -1,0 +1,259 @@
+
+services:
+  # ==========================================
+  # CASSANDRA
+  # ==========================================
+  cassandra:
+    image: cassandra:5.0
+    container_name: url-shortener-cassandra
+    hostname: cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      CASSANDRA_CLUSTER_NAME: url-shortener-cluster
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh 127.0.0.1 -e 'DESCRIBE KEYSPACES'"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+
+  cassandra-init:
+    image: cassandra:5.0
+    container_name: url-shortener-cassandra-init
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./docker/init.cql:/init.cql:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - "cqlsh cassandra -f /init.cql"
+    restart: "no"
+
+  # ==========================================
+  # REDIS CLUSTER - NODE 10
+  # ==========================================
+  redisnode10:
+    image: redis:7.4
+    container_name: redisnode10
+    hostname: redisnode10
+    ports:
+      - "7000:6379"
+      - "17000:16379"
+    mem_limit: 2g
+    volumes:
+      - ./data/redisnode10:/data
+    command: >
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --port 6379
+      --cluster-announce-port 6379
+      --cluster-announce-bus-port 16379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ==========================================
+  # REDIS CLUSTER - NODE 20
+  # ==========================================
+  redisnode20:
+    image: redis:7.4
+    container_name: redisnode20
+    hostname: redisnode20
+    ports:
+      - "7001:6379"
+      - "17001:16379"
+    mem_limit: 2g
+    depends_on:
+      redisnode10:
+        condition: service_healthy
+    volumes:
+      - ./data/redisnode20:/data
+    command: >
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --port 6379
+      --cluster-announce-port 6379
+      --cluster-announce-bus-port 16379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ==========================================
+  # REDIS CLUSTER - NODE 30
+  # ==========================================
+  redisnode30:
+    image: redis:7.4
+    container_name: redisnode30
+    hostname: redisnode30
+    ports:
+      - "7002:6379"
+      - "17002:16379"
+    mem_limit: 2g
+    depends_on:
+      redisnode20:
+        condition: service_healthy
+    volumes:
+      - ./data/redisnode30:/data
+    command: >
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --port 6379
+      --cluster-announce-port 6379
+      --cluster-announce-bus-port 16379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ==========================================
+  # REDIS CLUSTER - NODE 40
+  # ==========================================
+  redisnode40:
+    image: redis:7.4
+    container_name: redisnode40
+    hostname: redisnode40
+    ports:
+      - "7003:6379"
+      - "17003:16379"
+    mem_limit: 2g
+    depends_on:
+      redisnode30:
+        condition: service_healthy
+    volumes:
+      - ./data/redisnode40:/data
+    command: >
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --port 6379
+      --cluster-announce-port 6379
+      --cluster-announce-bus-port 16379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ==========================================
+  # REDIS CLUSTER - NODE 50
+  # ==========================================
+  redisnode50:
+    image: redis:7.4
+    container_name: redisnode50
+    hostname: redisnode50
+    ports:
+      - "7004:6379"
+      - "17004:16379"
+    mem_limit: 2g
+    depends_on:
+      redisnode40:
+        condition: service_healthy
+    volumes:
+      - ./data/redisnode50:/data
+    command: >
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --port 6379
+      --cluster-announce-port 6379
+      --cluster-announce-bus-port 16379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ==========================================
+  # REDIS CLUSTER - NODE 60
+  # ==========================================
+  redisnode60:
+    image: redis:7.4
+    container_name: redisnode60
+    hostname: redisnode60
+    ports:
+      - "7005:6379"
+      - "17005:16379"
+    mem_limit: 2g
+    depends_on:
+      redisnode50:
+        condition: service_healthy
+    volumes:
+      - ./data/redisnode60:/data
+    command: >
+      redis-server
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --port 6379
+      --cluster-announce-port 6379
+      --cluster-announce-bus-port 16379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ==========================================
+  # REDIS CLUSTER INITIALIZATION
+  # ==========================================
+  redis-cluster-init:
+    image: redis:7.4
+    container_name: redis-cluster-init
+    depends_on:
+      redisnode10:
+        condition: service_healthy
+      redisnode20:
+        condition: service_healthy
+      redisnode30:
+        condition: service_healthy
+      redisnode40:
+        condition: service_healthy
+      redisnode50:
+        condition: service_healthy
+      redisnode60:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if redis-cli -h redisnode10 cluster info | grep -q 'cluster_state:ok'; then
+          echo 'Redis Cluster already initialized';
+        else
+          echo yes | redis-cli --cluster create \
+            redisnode10:6379 \
+            redisnode20:6379 \
+            redisnode30:6379 \
+            redisnode40:6379 \
+            redisnode50:6379 \
+            redisnode60:6379 \
+            --cluster-replicas 1;
+        fi
+    restart: "no"
+
+volumes:
+  cassandra_data:
